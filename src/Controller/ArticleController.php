@@ -8,6 +8,8 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Twig\Environment;
+use Michelf\MarkdownInterface;
+use Symfony\Component\Cache\Adapter\AdapterInterface;
 
 class ArticleController extends AbstractController
 {
@@ -22,19 +24,32 @@ class ArticleController extends AbstractController
     /**
      * @Route("/news/{slug}", name="article_show")
      */
-    public function show($slug)
+    public function show($slug , Environment $envar, MarkdownInterface $marktext , AdapterInterface $cache)
     {
         $comments = [
             'I ate a normal rock once. It did NOT taste like bacon!',
             'Woohoo! I\'m going on an all-asteroid diet!',
             'I like bacon too! Buy some from my site! bakinsomebacon.com',
         ];
+		
+		$info =  "Thisddd is *test* message";
+		
+		$item = $cache->getItem('markdown_'.md5($info));
+		if(!$item->isHit()){
+			$item->set($marktext->transform($info));
+			$cache->save($item);
+		}
+		$desc = $item->get();
+		
+		dd($marktext);
 
-        return $this->render('article/show.html.twig', [
+        $html = $envar->render('article/show.html.twig', [
             'title' => ucwords(str_replace('-', ' ', $slug)),
             'slug' => $slug,
             'comments' => $comments,
+			'desc'=>$desc
         ]);
+		return new Response($html);
     }
 
     /**
